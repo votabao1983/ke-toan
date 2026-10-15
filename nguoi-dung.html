@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Người dùng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <script src="assets/app.js"></script>
+</head>
+<body data-page="nguoi-dung" class="opacity-0 transition-opacity">
+
+<div id="page">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <nav class="mb-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <span>Quản trị</span><i data-icon="chevronRight" class="h-3.5 w-3.5"></i><span>Người dùng</span>
+      </nav>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Người dùng</h1>
+    </div>
+    <button class="btn-primary" data-user="new"><i data-icon="plus" class="h-4 w-4"></i>Thêm người dùng</button>
+  </div>
+
+  <!-- Thống kê nhanh -->
+  <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4" id="stats"></div>
+
+  <!-- Bộ lọc -->
+  <div class="card mt-6 overflow-hidden">
+    <div class="flex flex-col gap-3 border-b border-slate-200 p-4 dark:border-slate-800 md:flex-row md:items-center">
+      <div class="relative md:w-80">
+        <i data-icon="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+        <input id="q" class="inp pl-9" placeholder="Tìm tên, tài khoản, email…">
+      </div>
+      <select id="f-group" class="inp md:w-52"><option value="">Tất cả nhóm</option></select>
+      <div class="inline-flex rounded-lg bg-slate-100 p-0.5 text-sm font-medium dark:bg-slate-800" id="f-status">
+        <button data-s="" class="rounded-md bg-white px-3 py-1.5 shadow-sm dark:bg-slate-700">Tất cả</button>
+        <button data-s="1" class="rounded-md px-3 py-1.5 text-slate-500 dark:text-slate-400">Hoạt động</button>
+        <button data-s="0" class="rounded-md px-3 py-1.5 text-slate-500 dark:text-slate-400">Đã khoá</button>
+      </div>
+      <span id="count" class="text-sm text-slate-500 md:ml-auto dark:text-slate-400"></span>
+    </div>
+
+    <!-- Bảng (desktop) -->
+    <div class="hidden overflow-x-auto md:block">
+      <table class="tbl">
+        <thead><tr><th>Người dùng</th><th>Nhóm</th><th>Phòng ban</th><th>Đăng nhập gần nhất</th><th>Trạng thái</th><th class="w-16"></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <!-- Thẻ (mobile) -->
+    <ul id="cards" class="divide-y divide-slate-100 dark:divide-slate-800 md:hidden"></ul>
+
+    <div id="empty" class="hidden py-14 text-center text-sm text-slate-500">Không tìm thấy người dùng phù hợp.</div>
+
+    <!-- Phân trang -->
+    <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-800">
+      <span class="text-slate-500 dark:text-slate-400">Trang 1 / 1</span>
+      <div class="flex gap-1"><button class="btn px-2.5 py-1.5" disabled>‹</button><button class="btn px-2.5 py-1.5" disabled>›</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide-over: chi tiết người dùng -->
+<div id="drawer" class="fixed inset-0 z-[60] hidden">
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" data-drawer-close></div>
+  <aside class="absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-200 dark:bg-slate-900" id="drawer-panel">
+    <div class="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+      <span id="d-avatar" class="grid h-11 w-11 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-500/20 dark:text-brand-200"></span>
+      <div class="min-w-0">
+        <div id="d-name" class="truncate font-semibold text-slate-900 dark:text-white"></div>
+        <div id="d-sub" class="truncate text-xs text-slate-500 dark:text-slate-400"></div>
+      </div>
+      <button class="btn-icon ml-auto" data-drawer-close><i data-icon="x" class="h-5 w-5"></i></button>
+    </div>
+    <div class="flex gap-6 border-b border-slate-200 px-5 pt-3 dark:border-slate-800" id="d-tabs">
+      <button class="tab tab-active" data-tab="info">Thông tin</button>
+      <button class="tab" data-tab="groups">Nhóm & quyền</button>
+      <button class="tab" data-tab="security">Bảo mật</button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-5 py-5">
+      <!-- Thông tin -->
+      <div data-pane="info" class="space-y-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="block"><span class="mb-1.5 block text-sm font-medium">Tài khoản đăng nhập</span><input id="i-user" class="inp font-mono"></label>
+          <label class="block"><span class="mb-1.5 block text-sm font-medium">Họ tên</span><input id="i-name" class="inp"></label>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="block"><span class="mb-1.5 block text-sm font-medium">Email</span><input id="i-email" type="email" class="inp"></label>
+          <label class="block"><span class="mb-1.5 block text-sm font-medium">Điện thoại</span><input id="i-phone" class="inp"></label>
+        </div>
+        <label class="block"><span class="mb-1.5 block text-sm font-medium">Phòng ban</span>
+          <select id="i-dept" class="inp"><option>Kế toán</option><option>Thủ quỹ</option><option>Ban giám đốc</option><option>Chi nhánh Hà Nội</option><option>Chi nhánh Đà Lạt</option></select></label>
+        <label class="block"><span class="mb-1.5 block text-sm font-medium">Khu vực mặc định</span>
+          <select class="inp"><option>TP. Hồ Chí Minh</option><option>Hà Nội</option><option>Đà Lạt</option></select></label>
+        <div id="i-pass-wrap" class="hidden">
+          <label class="block"><span class="mb-1.5 block text-sm font-medium">Mật khẩu ban đầu</span><input type="password" class="inp" autocomplete="new-password"></label>
+        </div>
+        <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700">
+          <span><span class="block text-sm font-medium">Cho phép đăng nhập</span><span class="block text-xs text-slate-500">Tắt để khoá tài khoản, không xoá dữ liệu</span></span>
+          <button type="button" id="i-active" class="switch" role="switch" aria-checked="true" data-switch></button>
+        </label>
+      </div>
+      <!-- Nhóm -->
+      <div data-pane="groups" class="hidden space-y-3">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Người dùng được cộng quyền của tất cả nhóm đã chọn. Chi tiết quyền xem ở <a href="cai-dat.html#pq-nguoi-dung" class="font-medium text-brand-600 hover:underline dark:text-brand-300">Cài đặt → Phân quyền</a>.</p>
+        <div id="g-list" class="space-y-2"></div>
+      </div>
+      <!-- Bảo mật -->
+      <div data-pane="security" class="hidden space-y-4">
+        <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+          <div class="flex items-start gap-3">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300"><i data-icon="key" class="h-4 w-4"></i></span>
+            <div class="flex-1"><div class="text-sm font-semibold">Đặt lại mật khẩu</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Tạo mật khẩu tạm; người dùng phải đổi ở lần đăng nhập kế tiếp.</p></div>
+            <button class="btn" onclick="App.toast('Mật khẩu tạm: Hyt@8421 (đã sao chép)')">Đặt lại</button>
+          </div>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+          <div class="flex items-start gap-3">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300"><i data-icon="logout" class="h-4 w-4"></i></span>
+            <div class="flex-1"><div class="text-sm font-semibold">Đăng xuất mọi thiết bị</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Huỷ tất cả phiên đăng nhập đang mở.</p></div>
+            <button class="btn" onclick="App.toast('Đã đăng xuất 2 phiên')">Đăng xuất</button>
+          </div>
+        </div>
+        <div>
+          <div class="mb-2 text-sm font-semibold">Lịch sử đăng nhập</div>
+          <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200 text-sm dark:divide-slate-800 dark:border-slate-700" id="login-log"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+      <button class="btn" data-drawer-close>Huỷ</button>
+      <button class="btn-primary" id="d-save">Lưu</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  var E = App.esc, I = App.icon;
+  var GROUPS = ['Quản trị hệ thống', 'Kế toán trưởng', 'Kế toán viên', 'Thủ quỹ', 'Quản lý chi nhánh', 'Nhân sự'];
+  // [username, họ tên, email, phòng, nhóm[], lần đăng nhập, active]
+  var USERS = [
+    ['admin', 'Quản trị hệ thống', 'admin@hoayeuthuong.com', 'Ban giám đốc', [0], '14/10/2026 08:12', 1],
+    ['duong.pham', 'Phạm Dương', 'duong.pham@hoayeuthuong.com', 'Ban giám đốc', [1, 4], '14/10/2026 07:55', 1],
+    ['ketoan.lan', 'Nguyễn Thị Lan', 'lan.nguyen@hoayeuthuong.com', 'Kế toán', [1], '14/10/2026 09:30', 1],
+    ['ketoan.minh', 'Trần Văn Minh', 'minh.tran@hoayeuthuong.com', 'Kế toán', [2], '13/10/2026 17:42', 1],
+    ['ketoan.thu', 'Lê Thị Thu', 'thu.le@hoayeuthuong.com', 'Kế toán', [2], '13/10/2026 16:05', 1],
+    ['thuquy.hoa', 'Võ Thị Hoa', 'hoa.vo@hoayeuthuong.com', 'Thủ quỹ', [3], '14/10/2026 08:01', 1],
+    ['ql.hanoi', 'Đỗ Quang Huy', 'huy.do@hoayeuthuong.com', 'Chi nhánh Hà Nội', [4], '10/10/2026 10:20', 1],
+    ['ql.dalat', 'Phan Ngọc Mai', 'mai.phan@hoayeuthuong.com', 'Chi nhánh Đà Lạt', [4], '02/10/2026 14:48', 1],
+    ['hr.tuan', 'Bùi Anh Tuấn', 'tuan.bui@hoayeuthuong.com', 'Nhân sự', [5], '28/09/2026 11:11', 1],
+    ['ketoan.cu', 'Hồ Thị Ngân', 'ngan.ho@hoayeuthuong.com', 'Kế toán', [2], '15/03/2025 09:00', 0]
+  ];
+  var TONES = ['bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300', 'bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
+    'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300', 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+    'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300', 'bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300'];
+
+  function initials(n) { var p = n.split(' '); return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase(); }
+  function groupBadges(g) { return g.map(function (i) { return '<span class="badge ' + TONES[i] + '">' + E(GROUPS[i]) + '</span>'; }).join(' '); }
+  function status(a) {
+    return a ? '<span class="badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Hoạt động</span>'
+             : '<span class="badge bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"><span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>Đã khoá</span>';
+  }
+
+  var fStatus = '';
+  function render() {
+    var q = App.normalize(document.getElementById('q').value.trim());
+    var g = document.getElementById('f-group').value;
+    var list = USERS.filter(function (u) {
+      if (q && App.normalize(u[0] + ' ' + u[1] + ' ' + u[2]).indexOf(q) < 0) return false;
+      if (g !== '' && u[4].indexOf(+g) < 0) return false;
+      if (fStatus !== '' && String(u[6]) !== fStatus) return false;
+      return true;
+    });
+    document.getElementById('rows').innerHTML = list.map(function (u) {
+      return '<tr class="cursor-pointer" data-user="' + u[0] + '"><td><div class="flex items-center gap-3">' +
+        '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-full ' + (u[6] ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800') + ' text-xs font-bold">' + initials(u[1]) + '</span>' +
+        '<div class="min-w-0"><div class="truncate font-medium text-slate-900 dark:text-white">' + E(u[1]) + '</div><div class="truncate font-mono text-xs text-slate-500">' + E(u[0]) + '</div></div></div></td>' +
+        '<td>' + groupBadges(u[4]) + '</td><td class="text-slate-600 dark:text-slate-300">' + E(u[3]) + '</td>' +
+        '<td class="num text-slate-500 dark:text-slate-400">' + u[5] + '</td><td>' + status(u[6]) + '</td>' +
+        '<td><button class="btn-icon" title="Sửa">' + I('pencil', 'h-4 w-4') + '</button></td></tr>';
+    }).join('');
+    document.getElementById('cards').innerHTML = list.map(function (u) {
+      return '<li data-user="' + u[0] + '" class="flex cursor-pointer items-center gap-3 px-4 py-3 active:bg-slate-50 dark:active:bg-slate-800">' +
+        '<span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">' + initials(u[1]) + '</span>' +
+        '<div class="min-w-0 flex-1"><div class="flex items-center gap-2"><span class="truncate font-medium text-slate-900 dark:text-white">' + E(u[1]) + '</span>' + (u[6] ? '' : status(0)) + '</div>' +
+        '<div class="truncate text-xs text-slate-500">' + E(u[0]) + ' · ' + E(u[3]) + '</div><div class="mt-1">' + groupBadges(u[4]) + '</div></div>' +
+        I('chevronRight', 'h-4 w-4 text-slate-400') + '</li>';
+    }).join('');
+    document.getElementById('empty').classList.toggle('hidden', list.length > 0);
+    document.getElementById('count').textContent = list.length + ' / ' + USERS.length + ' người dùng';
+  }
+
+  function stats() {
+    var active = USERS.filter(function (u) { return u[6]; }).length;
+    var acc = USERS.filter(function (u) { return u[4].some(function (g) { return g >= 1 && g <= 3; }); }).length;
+    var data = [
+      ['Tổng người dùng', USERS.length, 'users', 'bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300'],
+      ['Đang hoạt động', active, 'check', 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300'],
+      ['Nhóm kế toán', acc, 'book', 'bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300'],
+      ['Đăng nhập hôm nay', 5, 'history', 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300']
+    ];
+    document.getElementById('stats').innerHTML = data.map(function (d) {
+      return '<div class="card flex items-center gap-3 p-4"><span class="grid h-10 w-10 place-items-center rounded-xl ' + d[3] + '">' + I(d[2], 'h-5 w-5') + '</span>' +
+        '<div><div class="num text-xl font-bold text-slate-900 dark:text-white">' + d[1] + '</div><div class="text-xs text-slate-500 dark:text-slate-400">' + d[0] + '</div></div></div>';
+    }).join('');
+  }
+
+  // ---- Drawer
+  var drawer = document.getElementById('drawer');
+  function openDrawer(username) {
+    var u = USERS.filter(function (x) { return x[0] === username; })[0];
+    var isNew = !u;
+    u = u || ['', '', '', 'Kế toán', [2], '', 1];
+    document.getElementById('d-avatar').textContent = isNew ? '+' : initials(u[1]);
+    document.getElementById('d-name').textContent = isNew ? 'Người dùng mới' : u[1];
+    document.getElementById('d-sub').textContent = isNew ? 'Nhập thông tin và chọn nhóm' : u[0] + ' · đăng nhập ' + u[5];
+    document.getElementById('i-user').value = u[0];
+    document.getElementById('i-user').readOnly = !isNew;
+    document.getElementById('i-name').value = u[1];
+    document.getElementById('i-email').value = u[2];
+    document.getElementById('i-phone').value = isNew ? '' : '09' + (10000000 + u[0].length * 1234567 % 89999999);
+    document.getElementById('i-dept').value = u[3];
+    document.getElementById('i-active').setAttribute('aria-checked', u[6] ? 'true' : 'false');
+    document.getElementById('i-pass-wrap').classList.toggle('hidden', !isNew);
+    document.getElementById('g-list').innerHTML = GROUPS.map(function (g, i) {
+      return '<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50/60 dark:border-slate-700 dark:has-[:checked]:bg-brand-500/10">' +
+        '<input type="checkbox" class="h-4 w-4 accent-brand-600"' + (u[4].indexOf(i) >= 0 ? ' checked' : '') + '><span class="text-sm font-medium">' + E(g) + '</span></label>';
+    }).join('');
+    document.getElementById('login-log').innerHTML = isNew ? '<li class="px-3 py-3 text-slate-400">Chưa có</li>' :
+      [[u[5], 'Chrome · Windows', '113.161.x.x'], ['13/10/2026 08:04', 'Chrome · Windows', '113.161.x.x'], ['12/10/2026 08:10', 'Safari · iPhone', '27.72.x.x']].map(function (l) {
+        return '<li class="flex items-center justify-between gap-3 px-3 py-2.5"><span class="num">' + l[0] + '</span><span class="text-xs text-slate-500">' + l[1] + ' · ' + l[2] + '</span></li>';
+      }).join('');
+    switchTab('info');
+    drawer.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+  function closeDrawer() { drawer.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+  function switchTab(t) {
+    document.querySelectorAll('#d-tabs [data-tab]').forEach(function (b) { b.classList.toggle('tab-active', b.dataset.tab === t); });
+    document.querySelectorAll('[data-pane]').forEach(function (p) { p.classList.toggle('hidden', p.dataset.pane !== t); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('f-group').innerHTML += GROUPS.map(function (g, i) { return '<option value="' + i + '">' + E(g) + '</option>'; }).join('');
+    stats(); render();
+    document.getElementById('q').addEventListener('input', render);
+    document.getElementById('f-group').addEventListener('change', render);
+    document.getElementById('f-status').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-s]'); if (!b) return;
+      fStatus = b.dataset.s;
+      this.querySelectorAll('button').forEach(function (x) { x.className = 'rounded-md px-3 py-1.5 ' + (x === b ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-500 dark:text-slate-400'); });
+      render();
+    });
+    document.addEventListener('click', function (e) {
+      var u = e.target.closest('[data-user]'); if (u) { openDrawer(u.dataset.user); return; }
+      if (e.target.closest('[data-drawer-close]')) { closeDrawer(); return; }
+      var t = e.target.closest('[data-tab]'); if (t) { switchTab(t.dataset.tab); return; }
+      var s = e.target.closest('[data-switch]'); if (s) s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true');
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !drawer.classList.contains('hidden')) closeDrawer(); });
+    document.getElementById('d-save').onclick = function () { closeDrawer(); App.toast('Đã lưu người dùng'); };
+  });
+})();
+</script>
+</body>
+</html>

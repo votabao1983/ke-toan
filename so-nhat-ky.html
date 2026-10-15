@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sổ nhật ký chung</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <script src="assets/app.js"></script>
+</head>
+<body data-page="so-nhat-ky" class="opacity-0 transition-opacity">
+
+<div id="page">
+  <!-- Tiêu đề trang -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <nav class="mb-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <span>Kế toán</span><i data-icon="chevronRight" class="h-3.5 w-3.5"></i><span>Sổ nhật ký chung</span>
+      </nav>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Sổ nhật ký chung</h1>
+        <span id="default-badge" class="badge bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+          <i data-icon="star" class="h-3 w-3"></i>Sổ mặc định
+        </span>
+      </div>
+      <p class="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+        <span id="book-title">Sổ kế toán · Năm tài chính 2021</span>
+        <button class="btn-icon h-7 w-7" data-open="modal-edit-book" title="Sửa tên sổ"><i data-icon="pencil" class="h-3.5 w-3.5"></i></button>
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button class="btn" id="btn-default"><i data-icon="star" class="h-4 w-4"></i>Đặt làm mặc định</button>
+      <button class="btn-primary" data-open="modal-new-book"><i data-icon="plus" class="h-4 w-4"></i>Thêm sổ mới</button>
+    </div>
+  </div>
+
+  <!-- Khoá sổ -->
+  <section class="card mt-6 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
+    <div class="flex items-start gap-3">
+      <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
+        <i data-icon="lock" class="h-5 w-5"></i>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-slate-900 dark:text-white">Ngày khoá sổ</div>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Chứng từ, bút toán có ngày ghi sổ trước thời điểm này sẽ không sửa/xoá được. Dữ liệu đồng bộ rơi vào kỳ đã khoá sẽ tự chuyển sang ngày kế tiếp.</p>
+      </div>
+    </div>
+    <div class="flex w-full gap-2 sm:ml-auto sm:w-auto">
+      <input id="lock-date" type="datetime-local" class="inp min-w-0 flex-1 sm:w-56 sm:flex-none" value="2024-12-31T23:59">
+      <button class="btn-primary" id="btn-lock">Cập nhật</button>
+    </div>
+  </section>
+
+  <!-- Nghiệp vụ kế toán -->
+  <section class="mt-6">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nghiệp vụ kế toán</h2>
+    <div id="biz" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"></div>
+  </section>
+
+  <!-- Sổ quỹ -->
+  <section class="mt-8">
+    <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sổ quỹ</h2>
+      <div class="relative sm:w-80">
+        <i data-icon="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+        <input class="inp pl-9" placeholder="Tìm theo tên hoặc số tài khoản… (vd: 1121, vietcombank)" data-filter="[data-acc]" id="acc-search">
+      </div>
+    </div>
+
+    <!-- Hay dùng -->
+    <div id="fav-wrap" class="card mb-4 hidden p-4">
+      <div class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        <i data-icon="star" class="h-4 w-4 text-amber-500"></i>Hay dùng
+      </div>
+      <div id="fav" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-5">
+      <!-- Tiền mặt -->
+      <div class="card overflow-hidden lg:col-span-2">
+        <div class="flex items-center gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <div class="grid h-9 w-9 place-items-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"><i data-icon="cash" class="h-5 w-5"></i></div>
+          <div>
+            <div class="text-sm font-semibold text-slate-900 dark:text-white">Sổ quỹ tiền mặt</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400"><span id="cash-count"></span> tài khoản · TK 111</div>
+          </div>
+        </div>
+        <ul id="cash" class="divide-y divide-slate-100 dark:divide-slate-800"></ul>
+      </div>
+
+      <!-- Ngân hàng -->
+      <div class="card overflow-hidden lg:col-span-3">
+        <div class="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <div class="grid h-9 w-9 place-items-center rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300"><i data-icon="bank" class="h-5 w-5"></i></div>
+          <div>
+            <div class="text-sm font-semibold text-slate-900 dark:text-white">Sổ quỹ ngân hàng</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400"><span id="bank-count"></span> tài khoản · TK 112</div>
+          </div>
+          <div class="ml-auto inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-medium dark:bg-slate-800" id="cur-filter">
+            <button data-cur="" class="rounded-md bg-white px-2.5 py-1 shadow-sm dark:bg-slate-700">Tất cả</button>
+            <button data-cur="VND" class="rounded-md px-2.5 py-1 text-slate-500 dark:text-slate-400">VND</button>
+            <button data-cur="USD" class="rounded-md px-2.5 py-1 text-slate-500 dark:text-slate-400">Ngoại tệ</button>
+          </div>
+        </div>
+        <ul id="bank" class="grid divide-y divide-slate-100 dark:divide-slate-800 md:grid-cols-2 md:divide-y-0"></ul>
+      </div>
+    </div>
+    <p id="no-result" class="hidden py-10 text-center text-sm text-slate-500">Không có tài khoản nào khớp từ khoá.</p>
+  </section>
+</div>
+
+<!-- Modal: Sửa tên sổ -->
+<div data-modal="modal-edit-book" class="fixed inset-0 z-[60] hidden">
+  <div data-modal-backdrop class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+  <div class="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-center sm:p-4">
+    <div class="modal-in pointer-events-auto w-full rounded-t-2xl bg-white shadow-2xl dark:bg-slate-900 sm:max-w-md sm:rounded-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <h3 class="font-semibold text-slate-900 dark:text-white">Sửa thông tin sổ</h3>
+        <button data-close class="btn-icon"><i data-icon="x" class="h-5 w-5"></i></button>
+      </div>
+      <div class="space-y-4 px-5 py-4">
+        <label class="block"><span class="mb-1.5 block text-sm font-medium">Tên sổ</span><input class="inp" value="Sổ kế toán"></label>
+        <label class="block"><span class="mb-1.5 block text-sm font-medium">Năm tài chính</span><input class="inp" type="number" value="2021"></label>
+        <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700">
+          <span><span class="block text-sm font-medium">Đang sử dụng</span><span class="block text-xs text-slate-500">Tắt để ẩn sổ khỏi danh sách chọn</span></span>
+          <button type="button" class="switch" role="switch" aria-checked="true" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked')!=='true')"></button>
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+        <button class="btn" data-close>Huỷ</button>
+        <button class="btn-primary" data-close onclick="App.toast('Đã lưu thông tin sổ')">Lưu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Thêm sổ mới -->
+<div data-modal="modal-new-book" class="fixed inset-0 z-[60] hidden">
+  <div data-modal-backdrop class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+  <div class="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-center sm:p-4">
+    <div class="modal-in pointer-events-auto w-full rounded-t-2xl bg-white shadow-2xl dark:bg-slate-900 sm:max-w-lg sm:rounded-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <h3 class="font-semibold text-slate-900 dark:text-white">Thêm sổ kế toán mới</h3>
+        <button data-close class="btn-icon"><i data-icon="x" class="h-5 w-5"></i></button>
+      </div>
+      <div class="space-y-4 px-5 py-4">
+        <div class="grid gap-4 sm:grid-cols-3">
+          <label class="block sm:col-span-2"><span class="mb-1.5 block text-sm font-medium">Tên sổ</span><input class="inp" value="Sổ kế toán"></label>
+          <label class="block"><span class="mb-1.5 block text-sm font-medium">Năm</span><input class="inp" type="number" value="2027"></label>
+        </div>
+        <label class="block"><span class="mb-1.5 block text-sm font-medium">Lấy số dư đầu kỳ từ</span>
+          <select class="inp"><option>Sổ kế toán · 2026 (kết chuyển số dư cuối kỳ)</option><option>Không – nhập tay sau</option></select>
+        </label>
+        <div class="flex gap-2 rounded-lg bg-sky-50 p-3 text-xs text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+          <i data-icon="alert" class="mt-0.5 h-4 w-4 shrink-0"></i>
+          <span>Hệ thống tạo sổ mới và chép số dư cuối kỳ của các tài khoản sang làm tồn đầu kỳ. Có thể chỉnh lại ở mục <b>Tồn đầu kỳ</b>.</span>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+        <button class="btn" data-close>Huỷ</button>
+        <button class="btn-primary" data-close onclick="App.toast('Đã tạo sổ kế toán 2027')">Tạo sổ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Danh sách TK sổ quỹ dùng chung: App.cash / App.bank (assets/app.js)
+  var CASH = App.cash, BANK = App.bank;
+  // Nghiệp vụ kế toán (UCBooks)
+  var BIZ = [
+    { t: 'Phải thu khách hàng', s: 'TK 131', i: 'download', c: 'emerald', href: 'cong-no.html?loai=thu' },
+    { t: 'Phải trả người bán', s: 'TK 331', i: 'upload', c: 'rose', href: 'cong-no.html?loai=tra' },
+    { t: 'Chứng từ tách', s: 'TK 138800T', i: 'split', c: 'violet' },
+    { t: 'Chứng từ kế toán', s: 'Danh sách chứng từ', i: 'invoice', c: 'brand' },
+    { t: 'Bút toán chi tiết', s: 'Nợ / Có từng dòng', i: 'layers', c: 'sky' },
+    { t: 'Công nợ phải trả', s: 'Báo cáo', i: 'chart', c: 'orange' },
+    { t: 'Chứng từ sai đối tượng', s: 'Báo cáo kiểm tra', i: 'alert', c: 'amber' },
+    { t: 'Chứng từ không hợp lý', s: 'Báo cáo kiểm tra', i: 'alert', c: 'amber' },
+    { t: 'Tồn đầu kỳ', s: 'Số dư đầu năm', i: 'calendar', c: 'teal' },
+    { t: 'Sổ sách', s: 'Sổ cái, CĐPS, BCTC', i: 'book', c: 'indigo' }
+  ];
+  var TONE = {
+    emerald: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300',
+    rose: 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300',
+    violet: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300',
+    brand: 'bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300',
+    sky: 'bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300',
+    orange: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300',
+    amber: 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300',
+    teal: 'bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300',
+    indigo: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300'
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var E = App.esc;
+    var book = App.currentBook();
+    document.getElementById('book-title').textContent = book.name + ' · Năm tài chính ' + book.year;
+    document.getElementById('lock-date').value = book.lockDate;
+    document.getElementById('default-badge').classList.toggle('hidden', !book.isDefault);
+    document.getElementById('btn-default').classList.toggle('hidden', book.isDefault);
+
+    // Nghiệp vụ
+    document.getElementById('biz').innerHTML = BIZ.map(function (b) {
+      return '<a href="' + (b.href || 'dang-phat-trien.html?m=' + encodeURIComponent(b.t)) + '" class="card group flex items-center gap-3 p-3.5 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:hover:border-brand-500/50">' +
+        '<span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl ' + TONE[b.c] + '">' + App.icon(b.i, 'h-5 w-5') + '</span>' +
+        '<span class="min-w-0"><span class="block text-sm font-semibold leading-snug text-slate-800 group-hover:text-brand-700 dark:text-slate-100 dark:group-hover:text-brand-300">' + E(b.t) + '</span>' +
+        '<span class="block truncate text-xs text-slate-500 dark:text-slate-400">' + E(b.s) + '</span></span></a>';
+    }).join('');
+
+    // Hay dùng (lưu trên trình duyệt)
+    var favs = [];
+    try { favs = JSON.parse(App.store('tax.favAcc') || '[]'); } catch (e) {}
+
+    function row(a, kind) {
+      var cur = a[2] || (kind === 'bank' && a[0].indexOf('1122') === 0 ? 'USD' : 'VND');
+      var on = favs.indexOf(a[0]) >= 0;
+      return '<li data-acc data-cur="' + cur + '" class="group relative">' +
+        '<a href="dang-phat-trien.html?m=' + encodeURIComponent('Sổ quỹ ' + a[0]) + '" class="flex items-center gap-3 px-4 py-2.5 pr-12 transition hover:bg-slate-50 dark:hover:bg-slate-800/50">' +
+          '<span class="num w-[68px] shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-center font-mono text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">' + a[0] + '</span>' +
+          '<span class="min-w-0 flex-1 truncate text-sm text-slate-700 group-hover:text-brand-700 dark:text-slate-200 dark:group-hover:text-brand-300">' + E(a[1]) + '</span>' +
+          (cur !== 'VND' ? '<span class="badge bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">' + cur + '</span>' : '') +
+        '</a>' +
+        '<button data-fav="' + a[0] + '" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 transition ' +
+          (on ? 'text-amber-500' : 'text-slate-300 opacity-0 hover:text-amber-500 group-hover:opacity-100 dark:text-slate-600') + '" title="Ghim vào Hay dùng">' +
+          App.icon('star', 'h-4 w-4') + '</button>' +
+      '</li>';
+    }
+    function render() {
+      document.getElementById('cash').innerHTML = CASH.map(function (a) { return row(a, 'cash'); }).join('');
+      document.getElementById('bank').innerHTML = BANK.map(function (a) { return row(a, 'bank'); }).join('');
+      document.getElementById('cash-count').textContent = CASH.length;
+      document.getElementById('bank-count').textContent = BANK.length;
+      var all = CASH.concat(BANK);
+      var list = all.filter(function (a) { return favs.indexOf(a[0]) >= 0; });
+      document.getElementById('fav-wrap').classList.toggle('hidden', !list.length);
+      document.getElementById('fav').innerHTML = list.map(function (a) {
+        return '<a href="dang-phat-trien.html?m=' + encodeURIComponent('Sổ quỹ ' + a[0]) + '" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm hover:border-brand-300 hover:bg-brand-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-brand-500/50">' +
+          '<span class="font-mono text-xs text-slate-500">' + a[0] + '</span><span class="text-slate-700 dark:text-slate-200">' + E(a[1]) + '</span></a>';
+      }).join('');
+      applyFilters();
+    }
+
+    // Lọc theo loại tiền + từ khoá
+    var curSel = '';
+    function applyFilters() {
+      var q = App.normalize(document.getElementById('acc-search').value.trim());
+      var shown = 0;
+      document.querySelectorAll('[data-acc]').forEach(function (li) {
+        var okQ = !q || App.normalize(li.textContent).indexOf(q) >= 0;
+        var okC = !curSel || li.parentNode.id !== 'bank' || (curSel === 'VND' ? li.dataset.cur === 'VND' : li.dataset.cur !== 'VND');
+        li.classList.toggle('hidden', !(okQ && okC));
+        if (okQ && okC) shown++;
+      });
+      document.getElementById('no-result').classList.toggle('hidden', shown > 0);
+    }
+    document.addEventListener('filtered', applyFilters);
+    document.getElementById('cur-filter').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-cur]'); if (!b) return;
+      curSel = b.dataset.cur;
+      this.querySelectorAll('button').forEach(function (x) {
+        var on = x === b;
+        x.className = 'rounded-md px-2.5 py-1 ' + (on ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-500 dark:text-slate-400');
+      });
+      applyFilters();
+    });
+    document.addEventListener('click', function (e) {
+      var f = e.target.closest('[data-fav]'); if (!f) return;
+      e.preventDefault();
+      var id = f.dataset.fav, i = favs.indexOf(id);
+      if (i >= 0) favs.splice(i, 1); else favs.push(id);
+      App.store('tax.favAcc', JSON.stringify(favs));
+      render();
+    });
+
+    // Phím tắt: "/" để tìm tài khoản
+    document.addEventListener('keydown', function (e) {
+      if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
+        e.preventDefault(); document.getElementById('acc-search').focus();
+      }
+    });
+
+    document.getElementById('btn-lock').onclick = function () {
+      App.toast('Đã cập nhật ngày khoá sổ: ' + App.fmtDateTime(document.getElementById('lock-date').value));
+    };
+    document.getElementById('btn-default').onclick = function () { App.toast('Đã đặt ' + book.name + ' ' + book.year + ' làm sổ mặc định'); };
+
+    render();
+  });
+</script>
+</body>
+</html>

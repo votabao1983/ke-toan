@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cài đặt kế toán</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <script src="assets/app.js"></script>
+</head>
+<body data-page="cai-dat" class="opacity-0 transition-opacity">
+
+<div id="page">
+  <!-- Menu con nằm ở sidebar (thay menu chính), xem window.APP_SUBMENU bên dưới -->
+  <nav class="mb-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+    <span>Cài đặt kế toán</span><i data-icon="chevronRight" class="h-3.5 w-3.5"></i><span id="crumb-sub"></span>
+  </nav>
+  <section id="panel" class="min-w-0"></section>
+</div>
+
+<!-- Modal dùng chung cho thêm / sửa -->
+<div data-modal="modal-form" class="fixed inset-0 z-[60] hidden">
+  <div data-modal-backdrop class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+  <div class="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-center sm:p-4">
+    <div class="modal-in pointer-events-auto flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-2xl dark:bg-slate-900 sm:max-w-lg sm:rounded-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <h3 id="form-title" class="font-semibold text-slate-900 dark:text-white"></h3>
+        <button data-close class="btn-icon"><i data-icon="x" class="h-5 w-5"></i></button>
+      </div>
+      <div id="form-body" class="space-y-4 overflow-y-auto px-5 py-4"></div>
+      <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+        <button class="btn" data-close>Huỷ</button>
+        <button class="btn-primary" data-close id="form-save">Lưu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal xác nhận xoá -->
+<div data-modal="modal-del" class="fixed inset-0 z-[60] hidden">
+  <div data-modal-backdrop class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+  <div class="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-center sm:p-4">
+    <div class="modal-in pointer-events-auto w-full rounded-t-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 sm:max-w-sm sm:rounded-2xl">
+      <div class="flex gap-3">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300"><i data-icon="trash" class="h-5 w-5"></i></span>
+        <div><h3 class="font-semibold text-slate-900 dark:text-white">Xoá mục này?</h3>
+          <p id="del-text" class="mt-1 text-sm text-slate-500 dark:text-slate-400"></p></div>
+      </div>
+      <div class="mt-5 flex justify-end gap-2">
+        <button class="btn" data-close>Huỷ</button>
+        <button class="btn-danger" data-close onclick="App.toast('Đã xoá')">Xoá</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var E = App.esc, I = App.icon;
+
+  // ------------------------------------------------------------ Menu con (UCSettingMenu)
+  var SUB = [
+    { head: 'Cài đặt chung' },
+    { id: 'mau-phieu', t: 'Mẫu phiếu thu chi', i: 'invoice' },
+    { id: 'tai-khoan', t: 'Danh mục tài khoản', i: 'tree' },
+    { id: 'cdkt', t: 'Bảng cân đối kế toán', i: 'layers' },
+    { id: 'kqkd', t: 'Bảng kết quả kinh doanh', i: 'chart' },
+    { id: 'pl', t: 'P&L', i: 'chart' },
+    { id: 'ccdc', t: 'Danh mục CCDC', i: 'tool' },
+    { id: 'ky-ke-toan', t: 'Kỳ kế toán', i: 'calendar' },
+    { id: 'tong-hop', t: 'Cấu hình bảng tổng hợp', i: 'sync' },
+    { id: 'ket-chuyen', t: 'Cấu hình kết chuyển', i: 'refund' },
+    { head: 'Phân quyền' },
+    { id: 'pq-danh-muc', t: 'Danh mục phân quyền', i: 'shield' },
+    { id: 'pq-nhom', t: 'Nhóm phân quyền', i: 'users' },
+    { id: 'pq-nguoi-dung', t: 'Phân quyền người dùng', i: 'key' }
+  ];
+  window.APP_SUBMENU = { title: 'Cài đặt kế toán', icon: 'settings', items: SUB };
+
+  // ------------------------------------------------------------ Dữ liệu mẫu
+  var TEMPLATES = [
+    ['Thu', '5112000', 'Thu tiền đơn hàng'], ['Thu', '1311000', 'Thu công nợ khách hàng'],
+    ['Thu', '7111000', 'Thu nhập khác'], ['Thu', '1411000', 'Hoàn ứng'],
+    ['Chi', '6321000', 'Mua hoa / nguyên liệu'], ['Chi', '1411000', 'Tạm ứng nhân viên'],
+    ['Chi', '3341000', 'Chi lương'], ['Chi', '6421000', 'Chi phí quản lý'],
+    ['Chi', '3311000', 'Trả tiền nhà cung cấp'], ['Chi', '6411000', 'Chi phí bán hàng']
+  ];
+  // [số hiệu, tên, cấp, loại, mẹ?, DC thuế, mã cấp Nợ, mã cấp Có, mã P&L]
+  var ACCOUNTS = [
+    ['111', 'Tiền mặt', 0, 'Dư Nợ', 1, 1, '110', '', ''],
+    ['1111001', 'Tiền mặt Văn phòng – VND', 1, 'Dư Nợ', 0, 1, '110', '', ''],
+    ['1111003', 'Tiền mặt Shop 270L (Bán hàng)', 1, 'Dư Nợ', 0, 1, '110', '', ''],
+    ['1112000', 'Tiền mặt – USD', 1, 'Dư Nợ', 0, 0, '110', '', ''],
+    ['112', 'Tiền gửi ngân hàng', 0, 'Dư Nợ', 1, 1, '110', '', ''],
+    ['1121001', 'Techcombank (CTy) – VND', 1, 'Dư Nợ', 0, 1, '110', '', ''],
+    ['1121002', 'Vietcombank (CTy) – VND', 1, 'Dư Nợ', 0, 1, '110', '', ''],
+    ['131', 'Phải thu của khách hàng', 0, 'Lưỡng tính', 1, 0, '131', '312', ''],
+    ['1311000', 'Phải thu khách hàng', 1, 'Lưỡng tính', 0, 0, '131', '312', ''],
+    ['133', 'Thuế GTGT được khấu trừ', 0, 'Dư Nợ', 1, 0, '152', '', ''],
+    ['1331000', 'Thuế GTGT đầu vào', 1, 'Dư Nợ', 0, 0, '152', '', ''],
+    ['138', 'Phải thu khác', 0, 'Dư Nợ', 1, 0, '136', '', ''],
+    ['1388100', 'HĐ đầu vào chưa kê khai', 1, 'Dư Nợ', 0, 0, '136', '', ''],
+    ['1388800', 'Phải thu khác (đồng bộ)', 1, 'Dư Nợ', 0, 0, '136', '', ''],
+    ['141', 'Tạm ứng', 0, 'Dư Nợ', 1, 0, '136', '', ''],
+    ['1411000', 'Tạm ứng nhân viên', 1, 'Dư Nợ', 0, 0, '136', '', ''],
+    ['331', 'Phải trả cho người bán', 0, 'Lưỡng tính', 1, 0, '132', '311', ''],
+    ['3311000', 'Phải trả nhà cung cấp', 1, 'Lưỡng tính', 0, 0, '132', '311', ''],
+    ['333', 'Thuế và các khoản phải nộp NN', 0, 'Dư Có', 1, 0, '', '313', ''],
+    ['3331001', 'Thuế GTGT đầu ra', 1, 'Dư Có', 0, 0, '', '313', ''],
+    ['511', 'Doanh thu bán hàng và CCDV', 0, 'Không số dư', 1, 0, '', '', 'DT'],
+    ['5112000', 'Doanh thu bán hàng', 1, 'Không số dư', 0, 0, '', '', 'DT'],
+    ['711', 'Thu nhập khác', 0, 'Không số dư', 1, 0, '', '', 'TNK'],
+    ['7111000', 'Thu nhập khác', 1, 'Không số dư', 0, 0, '', '', 'TNK']
+  ];
+  var CDKT = [
+    ['100', 'A. TÀI SẢN NGẮN HẠN', '', '', '110+120+130+140+150', 1],
+    ['110', 'I. Tiền và các khoản tương đương tiền', '111, 112, 113', '', '', 0],
+    ['130', 'III. Các khoản phải thu ngắn hạn', '', '', '131+132+136', 1],
+    ['131', '1. Phải thu ngắn hạn của khách hàng', '131 (dư Nợ)', '', '', 0],
+    ['136', '6. Phải thu ngắn hạn khác', '138, 141', '', '', 0],
+    ['150', 'V. Tài sản ngắn hạn khác', '', '', '152', 1],
+    ['152', '2. Thuế GTGT được khấu trừ', '133', '', '', 0],
+    ['270', 'TỔNG CỘNG TÀI SẢN', '', '', '100+200', 1],
+    ['300', 'C. NỢ PHẢI TRẢ', '', '', '310+330', 1],
+    ['311', '1. Phải trả người bán ngắn hạn', '', '331 (dư Có)', '', 0],
+    ['312', '2. Người mua trả tiền trước', '', '131 (dư Có)', '', 0],
+    ['313', '3. Thuế và các khoản phải nộp NN', '', '333', '', 0],
+    ['400', 'D. VỐN CHỦ SỞ HỮU', '', '', '411+421', 1],
+    ['440', 'TỔNG CỘNG NGUỒN VỐN', '', '', '300+400', 1]
+  ];
+  var KQKD = [
+    ['01', '1. Doanh thu bán hàng và cung cấp dịch vụ', '', '511', ''],
+    ['02', '2. Các khoản giảm trừ doanh thu', '521', '', ''],
+    ['10', '3. Doanh thu thuần', '', '', '01-02'],
+    ['11', '4. Giá vốn hàng bán', '632', '', ''],
+    ['20', '5. Lợi nhuận gộp', '', '', '10-11'],
+    ['21', '6. Doanh thu hoạt động tài chính', '', '515', ''],
+    ['22', '7. Chi phí tài chính', '635', '', ''],
+    ['25', '8. Chi phí bán hàng', '641', '', ''],
+    ['26', '9. Chi phí quản lý doanh nghiệp', '642', '', ''],
+    ['30', '10. Lợi nhuận thuần từ HĐKD', '', '', '20+21-22-25-26'],
+    ['31', '11. Thu nhập khác', '', '711', ''],
+    ['32', '12. Chi phí khác', '811', '', ''],
+    ['50', '15. Tổng lợi nhuận kế toán trước thuế', '', '', '30+31-32'],
+    ['60', '17. Lợi nhuận sau thuế TNDN', '', '', '50-51-52']
+  ];
+  var PL = [
+    ['DT', 'Doanh thu', '511'], ['GV', 'Giá vốn hoa & nguyên liệu', '632'], ['VC', 'Chi phí giao hàng', '6417'],
+    ['MKT', 'Quảng cáo (Google, Facebook)', '6418'], ['NS', 'Chi phí nhân sự', '6421, 6411'],
+    ['TNK', 'Thu nhập khác', '711'], ['CPK', 'Chi phí khác', '811']
+  ];
+  var CCDC = [['Máy tính / Laptop', 34], ['Điện thoại', 21], ['Xe máy giao hàng', 12], ['Bàn ghế văn phòng', 48], ['Tủ lạnh / Tủ mát bảo quản hoa', 9], ['Máy in hoá đơn', 7]];
+  var PERIODS = [['Quý 1/2026', '01/01/2026', '31/03/2026'], ['Quý 2/2026', '01/04/2026', '30/06/2026'], ['Quý 3/2026', '01/07/2026', '30/09/2026'], ['Quý 4/2026', '01/10/2026', '31/12/2026'], ['Quý 4/2025', '01/10/2025', '31/12/2025']];
+  var GENERAL = [['Công nợ phải thu KH', 'Sổ kế toán · 2026', '1311000', 'Hàng tháng', '01/01/2026', '31/12/2026', '13/10/2026 02:00'], ['Công nợ NCC', 'Sổ kế toán · 2026', '3311000', 'Hàng tháng', '01/01/2026', '31/12/2026', '13/10/2026 02:00'], ['Tạm ứng nhân viên', 'Sổ kế toán · 2026', '1411000', 'Hàng quý', '01/01/2026', '31/12/2026', '30/09/2026 02:00']];
+  var CARRY = [
+    [1, 'Kết chuyển doanh thu bán hàng', '511', '911', 'Không số dư'],
+    [2, 'Kết chuyển giảm trừ doanh thu', '511', '521', 'Không số dư'],
+    [3, 'Kết chuyển thu nhập khác', '711', '911', 'Không số dư'],
+    [4, 'Kết chuyển giá vốn', '911', '632', 'Không số dư'],
+    [5, 'Kết chuyển chi phí bán hàng', '911', '641', 'Không số dư'],
+    [6, 'Kết chuyển chi phí QLDN', '911', '642', 'Không số dư'],
+    [7, 'Kết chuyển lãi / lỗ', '911', '4212', 'Lưỡng tính']
+  ];
+  var PERM_CATS = [
+    ['Sổ nhật ký', ['Xem', 'Thêm', 'Sửa', 'Xoá', 'Xuất Excel', 'Khoá sổ']],
+    ['Chứng từ – Bút toán', ['Xem', 'Thêm', 'Sửa', 'Xoá', 'Xuất Excel']],
+    ['Duyệt chi', ['Xem', 'Tạo đề nghị', 'Duyệt', 'Chi tiền']],
+    ['HĐ đầu vào', ['Xem', 'Thêm', 'Sửa', 'Xoá', 'Import', 'Xuất Excel']],
+    ['Sổ sách – BCTC', ['Xem', 'Xuất Excel']],
+    ['Cài đặt', ['Xem', 'Sửa']]
+  ];
+  var GROUPS = [['Kế toán trưởng', 2, 'Toàn quyền nghiệp vụ kế toán'], ['Kế toán viên', 5, 'Nhập chứng từ, xem báo cáo'], ['Thủ quỹ', 2, 'Sổ quỹ tiền mặt, phiếu thu/chi'], ['Quản lý chi nhánh', 4, 'Duyệt chi, xem báo cáo chi nhánh']];
+
+  // ------------------------------------------------------------ Thành phần
+  function header(title, desc, actions) {
+    return '<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">' +
+      '<div><h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">' + E(title) + '</h1>' +
+      (desc ? '<p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">' + desc + '</p>' : '') + '</div>' +
+      '<div class="flex flex-wrap gap-2">' + (actions || '') + '</div></div>';
+  }
+  function searchBox(ph, target) {
+    return '<div class="relative w-full sm:w-72"><span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">' + I('search', 'h-4 w-4') + '</span>' +
+      '<input class="inp pl-9" placeholder="' + E(ph) + '" data-filter="' + target + '"></div>';
+  }
+  function addBtn(label, form) {
+    return '<button class="btn-primary" data-form="' + form + '">' + I('plus', 'h-4 w-4') + E(label) + '</button>';
+  }
+  function actions(name, form) {
+    return '<div class="flex justify-end gap-1">' +
+      '<button class="btn-icon" title="Sửa" data-form="' + form + '" data-name="' + E(name) + '">' + I('pencil', 'h-4 w-4') + '</button>' +
+      '<button class="btn-icon hover:!bg-rose-50 hover:!text-rose-600 dark:hover:!bg-rose-500/10" title="Xoá" data-del="' + E(name) + '">' + I('trash', 'h-4 w-4') + '</button></div>';
+  }
+  function table(cols, rowsHtml, rowAttr) {
+    return '<div class="card overflow-hidden"><div class="max-h-[70vh] overflow-auto scrollbar-thin"><table class="tbl"><thead><tr>' +
+      cols.map(function (c) { return '<th class="' + (c[1] || '') + '">' + E(c[0]) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>';
+  }
+  function chip(t, tone) {
+    return t ? '<span class="badge font-mono ' + (tone || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300') + '">' + E(t) + '</span>' : '<span class="text-slate-300 dark:text-slate-600">—</span>';
+  }
+  function sw(on) {
+    return '<button type="button" class="switch" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" data-switch></button>';
+  }
+
+  // ------------------------------------------------------------ Các panel
+  var PANELS = {
+    'mau-phieu': function () {
+      var tab = '<div class="mb-3 inline-flex rounded-lg bg-slate-100 p-0.5 text-sm font-medium dark:bg-slate-800" id="tpl-tabs">' +
+        ['Tất cả', 'Phiếu thu', 'Phiếu chi'].map(function (t, i) {
+          return '<button data-t="' + ['', 'Thu', 'Chi'][i] + '" class="rounded-md px-3 py-1.5 ' + (i === 0 ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-500 dark:text-slate-400') + '">' + t + '</button>';
+        }).join('') + '</div>';
+      var rows = TEMPLATES.map(function (r) {
+        var thu = r[0] === 'Thu';
+        return '<tr data-row data-type="' + r[0] + '"><td><span class="badge ' + (thu ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300') + '">Phiếu ' + r[0].toLowerCase() + '</span></td>' +
+          '<td>' + chip(r[1]) + '</td><td class="font-medium text-slate-800 dark:text-slate-100">' + E(r[2]) + '</td><td>' + actions(r[2], 'tpl') + '</td></tr>';
+      }).join('');
+      return header('Mẫu phiếu thu chi', 'Mẫu định khoản dùng khi nhập nhanh phiếu thu/chi ở Sổ quỹ.', searchBox('Tìm mẫu…', '#panel [data-row]') + addBtn('Thêm mẫu mới', 'tpl')) +
+        tab + table([['Loại', 'w-32'], ['TK đối ứng', 'w-36'], ['Tên mẫu'], ['', 'w-24']], rows);
+    },
+
+    'tai-khoan': function () {
+      var rows = ACCOUNTS.map(function (a) {
+        var parent = a[4];
+        return '<tr data-row data-lv="' + a[2] + '" data-acc-parent="' + (parent ? a[0] : '') + '" class="' + (parent ? 'bg-slate-50/60 dark:bg-slate-800/30' : '') + '">' +
+          '<td><div class="flex items-center gap-1.5" style="padding-left:' + (a[2] * 20) + 'px">' +
+            (parent ? '<button class="btn-icon h-6 w-6" data-toggle="' + a[0] + '">' + I('chevronDown', 'h-4 w-4 transition') + '</button>' : '<span class="w-6"></span>') +
+            '<span class="font-mono text-sm ' + (parent ? 'font-bold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200') + '">' + a[0] + '</span></div></td>' +
+          '<td class="' + (parent ? 'font-semibold text-slate-900 dark:text-white' : '') + '">' + E(a[1]) + '</td>' +
+          '<td class="hidden md:table-cell"><span class="text-xs text-slate-500 dark:text-slate-400">' + a[3] + '</span></td>' +
+          '<td class="hidden lg:table-cell">' + chip(a[6]) + '</td><td class="hidden lg:table-cell">' + chip(a[7]) + '</td><td class="hidden xl:table-cell">' + chip(a[8]) + '</td>' +
+          '<td class="text-center">' + sw(a[5]) + '</td><td>' + actions(a[0] + ' – ' + a[1], 'acc') + '</td></tr>';
+      }).join('');
+      return header('Danh mục tài khoản', 'Hệ thống tài khoản kế toán. <b>Đối chiếu thuế</b> = tài khoản được đồng bộ sang sổ thuế.',
+          searchBox('Tìm số hiệu / tên tài khoản…', '#panel [data-row]') +
+          '<button class="btn" onclick="App.toast(\'Đang xuất Excel…\')">' + I('download', 'h-4 w-4') + 'Xuất Excel</button>' + addBtn('Thêm tài khoản', 'acc')) +
+        table([['Số hiệu TK', 'w-44'], ['Tên tài khoản'], ['Loại TK', 'hidden md:table-cell'], ['Mã cấp Nợ', 'hidden lg:table-cell'], ['Mã cấp Có', 'hidden lg:table-cell'], ['Mã P&L', 'hidden xl:table-cell'], ['Đối chiếu thuế', 'text-center w-28'], ['', 'w-24']], rows);
+    },
+
+    'cdkt': function () { return reportLines('Bảng cân đối kế toán', 'Chỉ tiêu theo Thông tư 200. Số liệu lấy theo TK ghi Nợ / ghi Có hoặc công thức.', CDKT, true); },
+    'kqkd': function () { return reportLines('Bảng kết quả kinh doanh', 'Chỉ tiêu báo cáo kết quả hoạt động kinh doanh (mẫu B02-DN).', KQKD.map(function (r) { return [r[0], r[1], r[2], r[3], r[4], /^\d\d$/.test(r[0]) && r[4] ? 1 : 0]; }), false); },
+
+    'pl': function () {
+      var rows = PL.map(function (r) {
+        return '<tr data-row><td>' + chip(r[0], 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300') + '</td><td class="font-medium">' + E(r[1]) + '</td><td>' + r[2].split(', ').map(function (x) { return chip(x); }).join(' ') + '</td><td>' + actions(r[1], 'pl') + '</td></tr>';
+      }).join('');
+      return header('Cấu hình P&L', 'Nhóm tài khoản thành các dòng báo cáo lãi lỗ quản trị.', addBtn('Thêm dòng', 'pl')) +
+        table([['Mã', 'w-28'], ['Tên dòng'], ['Tài khoản'], ['', 'w-24']], rows);
+    },
+
+    'ccdc': function () {
+      var rows = CCDC.map(function (r) {
+        return '<tr data-row><td class="font-medium text-slate-800 dark:text-slate-100">' + E(r[0]) + '</td><td class="num text-right">' + r[1] + '</td><td>' + actions(r[0], 'ccdc') + '</td></tr>';
+      }).join('');
+      return header('Danh mục công cụ dụng cụ', 'Phân loại công cụ dụng cụ để quản lý bàn giao, sửa chữa.', searchBox('Tìm danh mục…', '#panel [data-row]') + addBtn('Thêm danh mục', 'ccdc')) +
+        table([['Tên danh mục'], ['Số CCDC', 'text-right w-32'], ['', 'w-24']], rows);
+    },
+
+    'ky-ke-toan': function () {
+      var rows = PERIODS.map(function (r, i) {
+        return '<tr data-row><td class="font-medium text-slate-800 dark:text-slate-100">' + E(r[0]) +
+          (i === 3 ? ' <span class="badge ml-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Hiện tại</span>' : '') +
+          '</td><td class="num">' + r[1] + '</td><td class="num">' + r[2] + '</td><td>' + actions(r[0], 'period') + '</td></tr>';
+      }).join('');
+      return header('Kỳ kế toán', 'Kỳ dùng để lọc HĐ đầu vào và kê khai thuế.', addBtn('Thêm kỳ', 'period')) +
+        table([['Tên kỳ'], ['Ngày bắt đầu', 'w-40'], ['Ngày kết thúc', 'w-40'], ['', 'w-24']], rows);
+    },
+
+    'tong-hop': function () {
+      var rows = GENERAL.map(function (r) {
+        return '<tr data-row><td class="font-medium text-slate-800 dark:text-slate-100">' + E(r[0]) + '</td><td class="hidden md:table-cell">' + E(r[1]) + '</td><td>' + chip(r[2]) + '</td>' +
+          '<td><span class="badge bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">' + r[3] + '</span></td>' +
+          '<td class="num hidden lg:table-cell">' + r[4] + ' – ' + r[5] + '</td><td class="num text-xs text-slate-500">' + r[6] + '</td><td>' + actions(r[0], 'general') + '</td></tr>';
+      }).join('');
+      return header('Cấu hình bảng tổng hợp', 'Bảng số dư theo đối tượng được tính sẵn định kỳ để báo cáo chạy nhanh.', addBtn('Thêm cấu hình', 'general')) +
+        table([['Tên'], ['Sổ', 'hidden md:table-cell'], ['Tài khoản'], ['Chu kỳ'], ['Khoảng thời gian', 'hidden lg:table-cell'], ['Đã cập nhật đến'], ['', 'w-24']], rows);
+    },
+
+    'ket-chuyen': function () {
+      var rows = CARRY.map(function (r) {
+        return '<tr data-row><td class="num text-slate-400">' + r[0] + '</td><td class="font-medium text-slate-800 dark:text-slate-100">' + E(r[1]) + '</td>' +
+          '<td>' + chip(r[2], 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300') + '</td><td>' + chip(r[3], 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300') + '</td>' +
+          '<td class="hidden md:table-cell text-xs text-slate-500">' + r[4] + '</td><td>' + actions(r[1], 'carry') + '</td></tr>';
+      }).join('');
+      return header('Cấu hình kết chuyển', 'Các bút toán kết chuyển cuối kỳ, chạy theo thứ tự.',
+          '<button class="btn" data-open="modal-run-carry">' + I('sync', 'h-4 w-4') + 'Tạo kết chuyển</button>' + addBtn('Thêm dòng', 'carry')) +
+        table([['#', 'w-12'], ['Diễn giải'], ['Nợ', 'w-28'], ['Có', 'w-28'], ['Loại TK', 'hidden md:table-cell'], ['', 'w-24']], rows) +
+        App.modalHtml('modal-run-carry', 'Tạo bút toán kết chuyển',
+          '<div class="grid gap-4 sm:grid-cols-2">' + App.field('Từ ngày', '<input type="date" class="inp" value="2026-07-01">') + App.field('Đến ngày', '<input type="date" class="inp" value="2026-09-30">') + '</div>' +
+          '<p class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">Bút toán kết chuyển cũ trong khoảng thời gian này sẽ được tạo lại.</p>',
+          '<button class="btn" data-close>Huỷ</button><button class="btn-primary" data-close onclick="App.toast(\'Đã tạo 7 bút toán kết chuyển\')">Tạo kết chuyển</button>');
+    },
+
+    'pq-danh-muc': function () {
+      var html = PERM_CATS.map(function (c) {
+        return '<div class="card p-4" data-row><div class="flex items-center justify-between"><div class="font-semibold text-slate-900 dark:text-white">' + E(c[0]) + '</div>' + actions(c[0], 'permcat') + '</div>' +
+          '<div class="mt-3 flex flex-wrap gap-1.5">' + c[1].map(function (a) { return '<span class="badge bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">' + E(a) + '</span>'; }).join('') + '</div></div>';
+      }).join('');
+      return header('Danh mục phân quyền', 'Mỗi chức năng có các thao tác được phép cấp quyền.', addBtn('Thêm chức năng', 'permcat')) +
+        '<div class="grid gap-3 md:grid-cols-2">' + html + '</div>';
+    },
+
+    'pq-nhom': function () {
+      var rows = GROUPS.map(function (g) {
+        return '<tr data-row><td class="font-medium text-slate-800 dark:text-slate-100">' + E(g[0]) + '</td><td class="hidden sm:table-cell text-slate-500 dark:text-slate-400">' + E(g[2]) + '</td>' +
+          '<td><div class="flex -space-x-2">' + Array.apply(null, Array(Math.min(g[1], 4))).map(function (_, i) {
+            return '<span class="grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-brand-' + (100 + i * 100) + ' text-[10px] font-bold text-brand-800 dark:border-slate-900">' + 'ABCD'[i] + '</span>';
+          }).join('') + '</div></td><td class="num">' + g[1] + ' người</td><td>' + actions(g[0], 'group') + '</td></tr>';
+      }).join('');
+      return header('Nhóm phân quyền', 'Gom người dùng thành nhóm để cấp quyền một lần.', addBtn('Thêm nhóm', 'group')) +
+        table([['Tên nhóm'], ['Mô tả', 'hidden sm:table-cell'], ['Thành viên'], ['Số người', 'w-28'], ['', 'w-24']], rows);
+    },
+
+    'pq-nguoi-dung': function () {
+      var acts = ['Xem', 'Thêm', 'Sửa', 'Xoá', 'Xuất Excel'];
+      var rows = PERM_CATS.map(function (c, ci) {
+        return '<tr><td class="font-medium text-slate-800 dark:text-slate-100">' + E(c[0]) + '</td>' + acts.map(function (a, ai) {
+          var has = c[1].indexOf(a) >= 0;
+          var on = has && (ai === 0 || ci < 3);
+          return '<td class="text-center">' + (has ? '<input type="checkbox" class="h-4 w-4 rounded border-slate-300 accent-brand-600"' + (on ? ' checked' : '') + '>' : '<span class="text-slate-300 dark:text-slate-700">—</span>') + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+      return header('Phân quyền người dùng', 'Chọn nhóm rồi tick quyền theo từng chức năng. Người dùng thuộc nhiều nhóm được cộng quyền.',
+          '<button class="btn-primary" onclick="App.toast(\'Đã lưu phân quyền\')">Lưu thay đổi</button>') +
+        '<div class="mb-4 grid gap-3 sm:grid-cols-2"><label class="block"><span class="mb-1.5 block text-sm font-medium">Nhóm</span><select class="inp">' +
+          GROUPS.map(function (g) { return '<option>' + E(g[0]) + '</option>'; }).join('') + '</select></label>' +
+          '<label class="block"><span class="mb-1.5 block text-sm font-medium">Thành viên</span><div class="flex flex-wrap gap-1.5 rounded-lg border border-slate-300 bg-white p-1.5 dark:border-slate-700 dark:bg-slate-800">' +
+          ['ketoan.lan', 'ketoan.minh', 'ketoan.thu'].map(function (u) { return '<span class="badge bg-brand-50 py-1 text-brand-700 dark:bg-brand-500/15 dark:text-brand-200">' + u + ' <button class="text-brand-400 hover:text-brand-700">×</button></span>'; }).join('') +
+          '<input class="min-w-[120px] flex-1 bg-transparent px-1 text-sm outline-none" placeholder="Thêm người dùng…"></div></label></div>' +
+        table([['Chức năng']].concat(acts.map(function (a) { return [a, 'text-center w-24']; })), rows);
+    }
+  };
+
+  function reportLines(title, desc, lines, hasBold) {
+    var rows = lines.map(function (r) {
+      var bold = r[5];
+      return '<tr data-row class="' + (bold ? 'bg-slate-50/70 dark:bg-slate-800/30' : '') + '"><td class="num font-mono text-xs text-slate-500">' + r[0] + '</td>' +
+        '<td class="' + (bold ? 'font-semibold text-slate-900 dark:text-white' : '') + '">' + E(r[1]) + '</td>' +
+        '<td class="hidden md:table-cell">' + (r[2] ? r[2].split(', ').map(function (x) { return chip(x, 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'); }).join(' ') : chip('')) + '</td>' +
+        '<td class="hidden md:table-cell">' + (r[3] ? chip(r[3], 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300') : chip('')) + '</td>' +
+        '<td>' + (r[4] ? '<code class="rounded bg-violet-50 px-1.5 py-0.5 text-xs text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">' + E(r[4]) + '</code>' : '') + '</td>' +
+        '<td>' + actions(r[1], 'line') + '</td></tr>';
+    }).join('');
+    return header(title, desc, searchBox('Tìm chỉ tiêu…', '#panel [data-row]') + addBtn('Thêm chỉ tiêu', 'line')) +
+      table([['Mã số', 'w-20'], ['Chỉ tiêu'], ['TK ghi Nợ', 'hidden md:table-cell'], ['TK ghi Có', 'hidden md:table-cell'], ['Công thức'], ['', 'w-24']], rows);
+  }
+
+  // ------------------------------------------------------------ Form thêm/sửa
+  var FORMS = {
+    tpl: ['Mẫu phiếu thu chi', function () {
+      return '<div><span class="mb-1.5 block text-sm font-medium">Loại phiếu</span><div class="grid grid-cols-2 gap-2">' +
+        '<label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 p-2.5 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 dark:border-slate-700 dark:has-[:checked]:bg-emerald-500/10"><input type="radio" name="t" checked class="accent-emerald-600">Phiếu thu</label>' +
+        '<label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 p-2.5 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 dark:border-slate-700 dark:has-[:checked]:bg-rose-500/10"><input type="radio" name="t" class="accent-rose-600">Phiếu chi</label></div></div>' +
+        App.field('Tài khoản đối ứng', '<input class="inp" list="acc-list" placeholder="Gõ số hiệu hoặc tên TK…">' + accList()) +
+        App.field('Tên mẫu', '<input class="inp" placeholder="vd: Thu tiền đơn hàng">');
+    }],
+    acc: ['Tài khoản', function () {
+      return '<div class="grid gap-4 sm:grid-cols-2">' + App.field('Số hiệu TK', '<input class="inp font-mono" placeholder="vd: 1121035">') +
+        App.field('Tài khoản mẹ', '<input class="inp font-mono" list="acc-list" placeholder="vd: 112">' + accList()) + '</div>' +
+        App.field('Tên tài khoản', '<input class="inp">') +
+        '<div class="grid gap-4 sm:grid-cols-3">' + App.field('Loại TK', '<select class="inp"><option>Dư Nợ</option><option>Dư Có</option><option>Lưỡng tính</option><option>Không số dư</option></select>') +
+        App.field('Mã cấp Nợ', '<input class="inp font-mono">') + App.field('Mã cấp Có', '<input class="inp font-mono">') + '</div>' +
+        App.field('Mã P&L', '<select class="inp"><option value="">— Không —</option>' + PL.map(function (p) { return '<option>' + p[0] + ' – ' + E(p[1]) + '</option>'; }).join('') + '</select>') +
+        '<div class="flex flex-col gap-2"><label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700"><span class="text-sm">Là tài khoản mẹ</span>' + sw(false) + '</label>' +
+        '<label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700"><span><span class="block text-sm">Đối chiếu thuế</span><span class="block text-xs text-slate-500">Đồng bộ phát sinh của TK này sang sổ thuế</span></span>' + sw(false) + '</label>' +
+        '<label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-700"><span class="text-sm">Khoá tài khoản</span>' + sw(false) + '</label></div>';
+    }],
+    period: ['Kỳ kế toán', function () {
+      return App.field('Tên kỳ', '<input class="inp" placeholder="vd: Quý 1/2027">') +
+        '<div class="grid gap-4 sm:grid-cols-2">' + App.field('Ngày bắt đầu', '<input type="date" class="inp">') + App.field('Ngày kết thúc', '<input type="date" class="inp">') + '</div>';
+    }],
+    carry: ['Dòng kết chuyển', function () {
+      return App.field('Diễn giải', '<input class="inp">') + '<div class="grid gap-4 sm:grid-cols-3">' +
+        App.field('TK Nợ', '<input class="inp font-mono" list="acc-list">' + accList()) + App.field('TK Có', '<input class="inp font-mono" list="acc-list">') +
+        App.field('Thứ tự', '<input type="number" class="inp" value="8">') + '</div>';
+    }],
+    general: ['Cấu hình bảng tổng hợp', function () {
+      return App.field('Tên', '<input class="inp">') + '<div class="grid gap-4 sm:grid-cols-2">' +
+        App.field('Sổ', '<select class="inp"><option>Sổ kế toán · 2026</option><option>Sổ kế toán · 2025</option></select>') +
+        App.field('Tài khoản', '<input class="inp font-mono" list="acc-list">' + accList()) + '</div>' +
+        App.field('Chu kỳ', '<select class="inp"><option>Hàng tháng</option><option>Hàng quý</option></select>') +
+        '<div class="grid gap-4 sm:grid-cols-2">' + App.field('Từ ngày', '<input type="date" class="inp">') + App.field('Đến ngày', '<input type="date" class="inp">') + '</div>';
+    }],
+    line: ['Chỉ tiêu báo cáo', function () {
+      return '<div class="grid gap-4 sm:grid-cols-3">' + App.field('Mã số', '<input class="inp font-mono">') + '<div class="sm:col-span-2">' + App.field('Tên chỉ tiêu', '<input class="inp">') + '</div></div>' +
+        '<div class="grid gap-4 sm:grid-cols-2">' + App.field('TK ghi Nợ', '<input class="inp font-mono" placeholder="111, 112">', 'Nhiều TK cách nhau dấu phẩy') + App.field('TK ghi Có', '<input class="inp font-mono">') + '</div>' +
+        App.field('Công thức', '<input class="inp font-mono" placeholder="vd: 110+120+130">', 'Để trống nếu lấy theo tài khoản') +
+        '<div class="flex flex-wrap gap-4 text-sm"><label class="flex items-center gap-2"><input type="checkbox" class="accent-brand-600">In đậm</label><label class="flex items-center gap-2"><input type="checkbox" class="accent-brand-600">Ghi âm</label><label class="flex items-center gap-2"><input type="checkbox" class="accent-brand-600">Chỉ là tiêu đề</label></div>';
+    }],
+    pl: ['Dòng P&L', function () { return '<div class="grid gap-4 sm:grid-cols-3">' + App.field('Mã', '<input class="inp font-mono">') + '<div class="sm:col-span-2">' + App.field('Tên dòng', '<input class="inp">') + '</div></div>' + App.field('Tài khoản', '<input class="inp font-mono" placeholder="6417, 6418">'); }],
+    ccdc: ['Danh mục CCDC', function () { return App.field('Tên danh mục', '<input class="inp">'); }],
+    permcat: ['Chức năng phân quyền', function () { return App.field('Tên chức năng', '<input class="inp">') + App.field('Thao tác', '<input class="inp" value="Xem, Thêm, Sửa, Xoá">', 'Cách nhau dấu phẩy'); }],
+    group: ['Nhóm phân quyền', function () { return App.field('Tên nhóm', '<input class="inp">') + App.field('Mô tả', '<textarea class="inp" rows="2"></textarea>'); }]
+  };
+  function accList() {
+    return '<datalist id="acc-list">' + ACCOUNTS.map(function (a) { return '<option value="' + a[0] + '">' + E(a[1]) + '</option>'; }).join('') + '</datalist>';
+  }
+
+  // ------------------------------------------------------------ Điều hướng
+  function show(id) {
+    if (!PANELS[id]) id = 'mau-phieu';
+    document.getElementById('panel').innerHTML = PANELS[id]();
+    var item = SUB.filter(function (s) { return s.id === id; })[0];
+    document.getElementById('crumb-sub').textContent = item.t;
+    document.title = item.t + ' · Cài đặt kế toán';
+    App.setSubActive(id);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    window.addEventListener('hashchange', function () { show(location.hash.slice(1)); });
+    show(location.hash.slice(1));
+
+    document.addEventListener('click', function (e) {
+      var f = e.target.closest('[data-form]');
+      if (f) {
+        var def = FORMS[f.dataset.form];
+        var name = f.dataset.name;
+        document.getElementById('form-title').textContent = (name ? 'Sửa ' : 'Thêm ') + def[0].toLowerCase();
+        document.getElementById('form-body').innerHTML = def[1]();
+        document.getElementById('form-save').onclick = function () { App.toast(name ? 'Đã lưu thay đổi' : 'Đã thêm mới'); };
+        App.openModal('modal-form');
+        return;
+      }
+      var d = e.target.closest('[data-del]');
+      if (d) { document.getElementById('del-text').textContent = '“' + d.dataset.del + '” sẽ bị xoá vĩnh viễn.'; App.openModal('modal-del'); return; }
+      var s = e.target.closest('[data-switch]');
+      if (s) { s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'); return; }
+      var t = e.target.closest('[data-toggle]');
+      if (t) {
+        // Thu gọn / mở các TK con ngay sau TK mẹ
+        var tr = t.closest('tr'), open = !t.classList.contains('closed');
+        t.classList.toggle('closed', open);
+        t.querySelector('svg').style.transform = open ? 'rotate(-90deg)' : '';
+        var n = tr.nextElementSibling;
+        while (n && n.dataset.lv !== '0') { n.style.display = open ? 'none' : ''; n = n.nextElementSibling; }
+        return;
+      }
+      var tb = e.target.closest('#tpl-tabs [data-t]');
+      if (tb) {
+        tb.parentNode.querySelectorAll('button').forEach(function (b) { b.className = 'rounded-md px-3 py-1.5 ' + (b === tb ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-500 dark:text-slate-400'); });
+        document.querySelectorAll('#panel [data-type]').forEach(function (r) { r.classList.toggle('hidden', !!tb.dataset.t && r.dataset.type !== tb.dataset.t); });
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <script src="assets/app.js"></script>
+</head>
+<body class="opacity-0 transition-opacity">
+<div class="grid min-h-screen lg:grid-cols-2">
+  <!-- Panel thương hiệu -->
+  <div class="relative hidden overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-indigo-700 p-12 text-white lg:flex lg:flex-col">
+    <div class="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl"></div>
+    <div class="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl"></div>
+    <div class="relative flex items-center gap-3">
+      <div class="grid h-11 w-11 place-items-center rounded-xl bg-white/15 backdrop-blur"><i data-icon="layers" class="h-6 w-6"></i></div>
+      <div><div class="text-lg font-bold">Kế toán</div><div class="text-sm text-white/70">Hoa Yêu Thương</div></div>
+    </div>
+    <div class="relative mt-auto max-w-md">
+      <h2 class="text-3xl font-bold leading-tight">Sổ sách gọn gàng.</h2>
+      <ul class="mt-8 space-y-4 text-white/85">
+        <li class="flex gap-3"><span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/15"><i data-icon="sync" class="h-3.5 w-3.5"></i></span>Tự đồng bộ hoá đơn, thanh toán, ngân hàng từ hệ thống bán hàng</li>
+        <li class="flex gap-3"><span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/15"><i data-icon="book" class="h-3.5 w-3.5"></i></span>Sổ nhật ký, sổ cái, cân đối phát sinh, BCTC</li>
+        <li class="flex gap-3"><span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/15"><i data-icon="lock" class="h-3.5 w-3.5"></i></span>Khoá sổ theo kỳ, phân quyền theo từng chức năng</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="flex items-center justify-center px-4 py-12 sm:px-8">
+    <div class="w-full max-w-sm">
+      <div class="mb-8 flex items-center gap-3 lg:hidden">
+        <div class="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white"><i data-icon="layers" class="h-5 w-5"></i></div>
+        <div><div class="font-bold text-slate-900 dark:text-white">Kế toán</div><div class="text-xs text-slate-500">Hoa Yêu Thương</div></div>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Đăng nhập</h1>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Dùng tài khoản hệ thống Hoa Yêu Thương.</p>
+
+      <div id="err" class="mt-6 hidden items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
+        <i data-icon="alert" class="mt-0.5 h-4 w-4 shrink-0"></i><span>Sai tài khoản hoặc mật khẩu. Còn 4 lần thử trước khi bị khoá tạm 15 phút.</span>
+      </div>
+
+      <form id="f" class="mt-6 space-y-4" novalidate>
+        <label class="block"><span class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Tài khoản</span>
+          <input id="u" class="inp py-2.5" autocomplete="username" autofocus placeholder="vd: ketoan.lan"></label>
+        <label class="block"><span class="mb-1.5 flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-300">Mật khẩu</span>
+          <div class="relative"><input id="p" type="password" class="inp py-2.5 pr-10" autocomplete="current-password">
+            <button type="button" id="toggle" class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Hiện mật khẩu"><i data-icon="eye" class="h-4 w-4"></i></button></div></label>
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"><input type="checkbox" class="h-4 w-4 accent-brand-600" checked>Ghi nhớ đăng nhập trên máy này</label>
+        <button class="btn-primary w-full py-2.5" id="submit">
+          <svg id="spin" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3"/></svg>
+          Đăng nhập
+        </button>
+      </form>
+      <p class="mt-8 text-center text-xs text-slate-400">Mockup: để trống mật khẩu để xem thông báo lỗi.</p>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var p = document.getElementById('p');
+    document.getElementById('toggle').onclick = function () { p.type = p.type === 'password' ? 'text' : 'password'; };
+    document.getElementById('f').onsubmit = function (e) {
+      e.preventDefault();
+      var err = document.getElementById('err');
+      err.classList.add('hidden'); err.classList.remove('flex');
+      document.getElementById('spin').classList.remove('hidden');
+      setTimeout(function () {
+        document.getElementById('spin').classList.add('hidden');
+        if (!p.value) { err.classList.remove('hidden'); err.classList.add('flex'); return; }
+        location.href = 'tong-quan.html';
+      }, 600);
+    };
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cấu hình hệ thống</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <script src="assets/app.js"></script>
+</head>
+<body data-page="cau-hinh" class="opacity-0 transition-opacity">
+
+<div id="page">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <nav class="mb-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <span>Quản trị</span><i data-icon="chevronRight" class="h-3.5 w-3.5"></i><span>Cấu hình</span>
+      </nav>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Cấu hình hệ thống</h1>
+    </div>
+    <div class="flex gap-2">
+      <span id="dirty" class="hidden items-center gap-1.5 self-center text-sm text-amber-600 dark:text-amber-400"><span class="h-2 w-2 rounded-full bg-amber-500"></span>Có thay đổi chưa lưu</span>
+      <button class="btn-primary" id="btn-save"><i data-icon="check" class="h-4 w-4"></i>Lưu cấu hình</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mt-6 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+    <div class="flex gap-6" id="tabs"></div>
+  </div>
+
+  <div id="content" class="mt-6"></div>
+</div>
+
+<script>
+(function () {
+  var E = App.esc, I = App.icon;
+
+  // Nhóm cấu hình (trước đây nằm rải rác ở Web.config + SystemConfig.xml + bảng cấu hình)
+  var CONFIG = [
+    { id: 'sync', t: 'Đồng bộ thuế', i: 'sync', items: [
+      { k: 'SO_THUE', l: 'Site này là sổ thuế', d: 'Bật = nhận dữ liệu đẩy sang và được phép kéo dữ liệu từ site chính.', type: 'bool', v: true },
+      { k: 'SYNC_SOURCE_URL', l: 'Địa chỉ site chính', d: 'Nơi cung cấp API hoá đơn, chứng từ, ngân hàng, nhân sự.', v: 'https://colorlifeservice.net/Tax' },
+      { k: 'SYNC_SECRET', l: 'Khoá ký dữ liệu (HMAC)', d: 'Dùng chung giữa 2 site. Đổi khoá phải đổi đồng thời ở site chính.', type: 'secret', v: '••••••••••••••••' },
+      { k: 'SYNC_ALLOWED_IPS', l: 'IP được phép gọi API đồng bộ', d: 'Cách nhau dấu phẩy. Để trống = không giới hạn.', v: '157.119.250.100' },
+      { k: 'SYNC_MAX_RETRY', l: 'Số lần thử lại khi lỗi', type: 'number', v: 3 },
+      { k: 'ACC_PHAI_THU_KHAC', l: 'TK treo khi thanh toán rơi vào kỳ đã khoá', type: 'mono', v: '1388800' },
+      { k: 'ACC_KHACH_LE', l: 'Đối tượng mặc định "Khách lẻ"', type: 'mono', v: '3799' },
+      { k: 'ACC_CONG_TY', l: 'Đối tượng mặc định "Công ty"', type: 'mono', v: '5779 – Công ty CP Color Life' }
+    ]},
+    { id: 'system', t: 'Hệ thống', i: 'sliders', items: [
+      { k: 'SITE_NAME', l: 'Tên hiển thị', v: 'Kế toán – Hoa Yêu Thương' },
+      { k: 'DEFAULT_REGION', l: 'Khu vực mặc định', type: 'select', opts: ['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Lạt'], v: 'TP. Hồ Chí Minh' },
+      { k: 'PAGE_SIZE', l: 'Số dòng mỗi trang', type: 'number', v: 50 },
+      { k: 'UPLOAD_MAX_MB', l: 'Dung lượng file đính kèm tối đa (MB)', type: 'number', v: 10 },
+      { k: 'LOG_LEVEL', l: 'Mức ghi log', type: 'select', opts: ['ERROR', 'WARN', 'INFO', 'DEBUG'], v: 'INFO' }
+    ]},
+    { id: 'security', t: 'Bảo mật', i: 'shield', items: [
+      { k: 'SESSION_HOURS', l: 'Thời gian giữ đăng nhập (giờ)', type: 'number', v: 12 },
+      { k: 'LOGIN_MAX_FAIL', l: 'Khoá tạm sau số lần sai mật khẩu', type: 'number', v: 5 },
+      { k: 'ADMIN_IP_WHITELIST', l: 'Chỉ cho đăng nhập từ IP', d: 'Để trống = cho mọi IP.', v: '' },
+      { k: 'FORCE_HTTPS', l: 'Bắt buộc HTTPS', type: 'bool', v: true }
+    ]},
+    { id: 'mail', t: 'Email', i: 'invoice', items: [
+      { k: 'SMTP_HOST', l: 'Máy chủ SMTP', v: 'smtp.gmail.com' },
+      { k: 'SMTP_PORT', l: 'Cổng', type: 'number', v: 587 },
+      { k: 'SMTP_USER', l: 'Tài khoản', v: 'ketoan@hoayeuthuong.com' },
+      { k: 'SMTP_PASS', l: 'Mật khẩu', type: 'secret', v: '••••••••••' },
+      { k: 'SMTP_SSL', l: 'Dùng SSL/TLS', type: 'bool', v: true }
+    ]}
+  ];
+
+  // Trạng thái các luồng đồng bộ (logtaxapi + provatpaymentlog)
+  var JOBS = [
+    ['HĐ đầu ra', 'Kéo', '14/10/2026 09:00', 'ok', '1.248 bút toán'],
+    ['HĐ đầu vào', 'Kéo', '14/10/2026 09:00', 'ok', '86 hoá đơn'],
+    ['Ngân hàng', 'Kéo', '14/10/2026 08:30', 'ok', '412 giao dịch'],
+    ['Nhân sự / lương', 'Kéo', '01/10/2026 02:00', 'ok', '3 bảng lương'],
+    ['Chứng từ', 'Kéo', '14/10/2026 09:00', 'running', 'Đang chạy… 63%'],
+    ['Thanh toán 1388', 'Kéo', '13/10/2026 23:00', 'error', 'Timeout khi gọi site chính'],
+    ['Hoàn tiền', 'Đẩy', '14/10/2026 08:45', 'ok', '12 phiếu'],
+    ['Thanh toán chưa xuất HĐ', 'Đẩy', '14/10/2026 08:45', 'ok', '57 thanh toán'],
+    ['Chi phí Google', 'Đẩy', '01/10/2026 03:00', 'paused', 'Chờ đến lượt']
+  ];
+  var ST = {
+    ok: ['Thành công', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', 'bg-emerald-500'],
+    running: ['Đang chạy', 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300', 'bg-sky-500 animate-pulse'],
+    error: ['Lỗi', 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300', 'bg-rose-500'],
+    paused: ['Chờ', 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', 'bg-slate-400']
+  };
+
+  function control(it) {
+    var id = 'c-' + it.k;
+    switch (it.type) {
+      case 'bool':
+        return '<button type="button" id="' + id + '" class="switch" role="switch" aria-checked="' + it.v + '" data-switch></button>';
+      case 'number':
+        return '<input id="' + id + '" type="number" class="inp num sm:w-32" value="' + it.v + '">';
+      case 'select':
+        return '<select id="' + id + '" class="inp sm:w-56">' + it.opts.map(function (o) { return '<option' + (o === it.v ? ' selected' : '') + '>' + E(o) + '</option>'; }).join('') + '</select>';
+      case 'secret':
+        return '<div class="flex gap-2 sm:w-80"><input id="' + id + '" type="password" class="inp font-mono" value="' + E(it.v) + '" autocomplete="off">' +
+          '<button type="button" class="btn px-2.5" data-reveal="' + id + '" title="Hiện / ẩn">' + I('eye', 'h-4 w-4') + '</button></div>';
+      case 'mono':
+        return '<input id="' + id + '" class="inp font-mono sm:w-80" value="' + E(it.v) + '">';
+      default:
+        return '<input id="' + id + '" class="inp sm:w-80" value="' + E(it.v) + '">';
+    }
+  }
+
+  function renderGroup(g) {
+    var html = '<div class="card divide-y divide-slate-100 dark:divide-slate-800">' + g.items.map(function (it) {
+      return '<div class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">' +
+        '<div class="min-w-0"><div class="text-sm font-medium text-slate-900 dark:text-white">' + E(it.l) + '</div>' +
+        '<div class="mt-0.5 font-mono text-[11px] text-slate-400">' + it.k + '</div>' +
+        (it.d ? '<div class="mt-1 text-xs text-slate-500 dark:text-slate-400">' + E(it.d) + '</div>' : '') + '</div>' +
+        '<div class="shrink-0">' + control(it) + '</div></div>';
+    }).join('') + '</div>';
+
+    if (g.id === 'sync') {
+      html = '<div class="space-y-6">' +
+        '<div class="card overflow-hidden"><div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">' +
+          '<div><div class="font-semibold text-slate-900 dark:text-white">Trạng thái đồng bộ</div><div class="text-xs text-slate-500 dark:text-slate-400">Cập nhật lúc 09:12 · tự làm mới mỗi 30 giây</div></div>' +
+          '<button class="btn" onclick="App.toast(\'Đã làm mới\')">' + I('sync', 'h-4 w-4') + '<span class="hidden sm:inline">Làm mới</span></button></div>' +
+        '<ul class="grid divide-y divide-slate-100 dark:divide-slate-800 lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">' + JOBS.map(function (j) {
+          var s = ST[j[3]];
+          return '<li class="flex items-center gap-3 px-5 py-3">' +
+            '<span class="h-2.5 w-2.5 shrink-0 rounded-full ' + s[2] + '"></span>' +
+            '<div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><span class="text-sm font-medium text-slate-900 dark:text-white">' + E(j[0]) + '</span>' +
+              '<span class="badge ' + (j[1] === 'Kéo' ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' : 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300') + '">' + j[1] + '</span>' +
+              '<span class="badge ' + s[1] + '">' + s[0] + '</span></div>' +
+              '<div class="mt-0.5 truncate text-xs ' + (j[3] === 'error' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400') + '">' + j[2] + ' · ' + E(j[4]) + '</div></div>' +
+            (j[3] === 'running' ? '<span class="text-xs text-slate-400">—</span>'
+              : '<button class="btn px-2.5 py-1.5 text-xs" data-run="' + E(j[0]) + '">' + (j[3] === 'error' ? 'Chạy lại' : 'Chạy ngay') + '</button>') +
+          '</li>';
+        }).join('') + '</ul></div>' + html + '</div>';
+    }
+    return html;
+  }
+
+  function show(id) {
+    var g = CONFIG.filter(function (x) { return x.id === id; })[0] || CONFIG[0];
+    document.querySelectorAll('#tabs [data-tab]').forEach(function (b) { b.classList.toggle('tab-active', b.dataset.tab === g.id); });
+    document.getElementById('content').innerHTML = renderGroup(g);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('tabs').innerHTML = CONFIG.map(function (g) {
+      return '<button class="tab flex items-center gap-2" data-tab="' + g.id + '">' + I(g.i, 'h-4 w-4') + E(g.t) + '</button>';
+    }).join('');
+    show(location.hash.slice(1));
+    var dirty = document.getElementById('dirty');
+    function setDirty(on) { dirty.classList.toggle('hidden', !on); dirty.classList.toggle('flex', on); }
+
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-tab]');
+      if (t) { history.replaceState(null, '', '#' + t.dataset.tab); show(t.dataset.tab); return; }
+      var s = e.target.closest('[data-switch]');
+      if (s) { s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'); setDirty(true); return; }
+      var r = e.target.closest('[data-reveal]');
+      if (r) { var inp = document.getElementById(r.dataset.reveal); inp.type = inp.type === 'password' ? 'text' : 'password'; return; }
+      var run = e.target.closest('[data-run]');
+      if (run) App.toast('Đã đưa "' + run.dataset.run + '" vào hàng đợi');
+    });
+    document.getElementById('content').addEventListener('input', function () { setDirty(true); });
+    document.getElementById('btn-save').onclick = function () { setDirty(false); App.toast('Đã lưu cấu hình'); };
+  });
+})();
+</script>
+</body>
+</html>
